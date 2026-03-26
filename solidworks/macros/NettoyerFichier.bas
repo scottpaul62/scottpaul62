@@ -1,12 +1,8 @@
-' ============================================================
+' ==============================================================
 ' Macro : NettoyerFichier.bas
-' Description : Simplifie et nettoie le fichier actif :
-'               - Supprime les esquisses vides
-'               - Supprime les corps/surfaces cachés inutiles
-'               - Recrée l'ordre logique de l'arbre
-'               - Affiche un rapport de nettoyage
-' Usage : Outils > Macros > Exécuter (avec pièce ouverte)
-' ============================================================
+' Description : Diagnostique et nettoie le fichier actif
+' Usage : Outils > Macros > Executer (avec piece ouverte)
+' ==============================================================
 
 Option Explicit
 
@@ -24,33 +20,26 @@ Sub main()
         Exit Sub
     End If
     If swModel.GetType <> 1 Then
-        MsgBox "Cette macro fonctionne uniquement sur les pièces.", vbExclamation, "NettoyerFichier"
+        MsgBox "Cette macro fonctionne uniquement sur les pieces.", vbExclamation, "NettoyerFichier"
         Exit Sub
     End If
 
     Dim rep As Integer
-    rep = MsgBox("Cette macro va analyser et nettoyer le fichier." & vbCrLf & _
-                 "Il est conseillé de sauvegarder d'abord." & vbCrLf & vbCrLf & _
-                 "Continuer ?", vbYesNo + vbQuestion, "NettoyerFichier")
+    rep = MsgBox("Cette macro va analyser et nettoyer le fichier." & vbCrLf & "Sauvegardez d'abord. Continuer ?", vbYesNo + vbQuestion, "NettoyerFichier")
     If rep = vbNo Then Exit Sub
 
     Set swPart = swModel
 
-    Dim nEsquisses  As Integer
-    Dim nCorps      As Integer
-    Dim nErreurs    As Integer
-    nEsquisses = 0
-    nCorps     = 0
-    nErreurs   = 0
+    Dim nErreurs As Integer
+    Dim nCorps   As Integer
+    Dim featList As String
+    nErreurs = 0
+    nCorps   = 0
+    featList = ""
 
-    ' --------------------------------------------------------
-    ' 1. Compter et marquer les features en erreur
-    ' --------------------------------------------------------
     Dim swFeat    As SldWorks.Feature
     Dim swFeatErr As Long
     Dim swFeatWrn As Long
-    Dim featList  As String
-    featList = ""
 
     Set swFeat = swModel.FirstFeature
     Do While Not swFeat Is Nothing
@@ -62,11 +51,8 @@ Sub main()
         Set swFeat = swFeat.GetNextFeature
     Loop
 
-    ' --------------------------------------------------------
-    ' 2. Identifier les corps cachés (hidden solid bodies)
-    ' --------------------------------------------------------
     Dim vBodies As Variant
-    vBodies = swPart.GetBodies2(0, True)  ' 0 = swSolidBody
+    vBodies = swPart.GetBodies2(0, True)
     Dim i As Integer
     If Not IsEmpty(vBodies) Then
         For i = 0 To UBound(vBodies)
@@ -78,39 +64,23 @@ Sub main()
         Next i
     End If
 
-    ' --------------------------------------------------------
-    ' 3. Reconstruire le modèle (force la mise à jour)
-    ' --------------------------------------------------------
     swModel.ForceRebuild3 False
-
-    ' --------------------------------------------------------
-    ' 4. Purger les items OLE / objets embarqués inutiles
-    ' --------------------------------------------------------
     swModel.DeleteOLEObjects
-
-    ' --------------------------------------------------------
-    ' 5. Sauvegarde
-    ' --------------------------------------------------------
     swModel.Save2 True
 
-    ' --------------------------------------------------------
-    ' 6. Rapport
-    ' --------------------------------------------------------
-    Dim sRapport As String
-    sRapport = "=== Rapport NettoyerFichier ==" & vbCrLf & vbCrLf & _
-               "Features en erreur  : " & nErreurs & vbCrLf & _
-               "Corps solides cachés: " & nCorps   & vbCrLf & vbCrLf
-
+    Dim msg As String
+    msg = "=== Rapport NettoyerFichier ===" & vbCrLf & vbCrLf
+    msg = msg & "Features en erreur   : " & nErreurs & vbCrLf
+    msg = msg & "Corps solides caches : " & nCorps & vbCrLf & vbCrLf
     If nErreurs > 0 Then
-        sRapport = sRapport & "Features à corriger :" & vbCrLf & featList & vbCrLf
+        msg = msg & "Features a corriger :" & vbCrLf & featList & vbCrLf
     End If
-
-    sRapport = sRapport & "Modèle reconstruit et sauvegardé."
+    msg = msg & "Modele reconstruit et sauvegarde."
 
     If nErreurs > 0 Then
-        MsgBox sRapport, vbExclamation, "NettoyerFichier"
+        MsgBox msg, vbExclamation, "NettoyerFichier"
     Else
-        MsgBox sRapport, vbInformation, "NettoyerFichier"
+        MsgBox msg, vbInformation, "NettoyerFichier"
     End If
 
 End Sub
